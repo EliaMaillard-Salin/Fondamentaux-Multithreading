@@ -63,7 +63,7 @@ DWORD WINAPI WholeThread(void* params)
 			goToWait = false;
 			int rTime = rand() % (respawnCoolDown - 5 + 1) + 5;
 			WaitForSingleObject(this_thread, rTime * 100);
-			rChar = rand() % (89 - 65 + 1) + 65;
+			rChar = rand() % (90 - 65 + 1) + 65;
 			pParams->posX = rand() % (100 - 2 + 1) + 2;
 		}
 	}
@@ -72,11 +72,11 @@ DWORD WINAPI WholeThread(void* params)
 int main()
 {
 	std::cout << "\33[?25l";
-	std::cout << "WHACK A THREAD";
-	std::cout << "\nPress the letter in () to kill the Thread";
+	std::cout << "\33[1;33m \t  ==== WHACK A THREAD ==== \33[m \n";
+	std::cout << "\33[1m  Press the letter in () to kill the Thread\33[m";
 
 	std::cout << "\33[2;100H";
-	std::cout << "POINTS:";
+	std::cout << "SCORE:";
 
 	std::cout << "\33[2;70H";
 	std::cout << "HEALTH:";
@@ -86,8 +86,8 @@ int main()
 	int points = 0;
 	int hp = 3;
 
-	int threadCount = 5;
-	int difficulty = 3;
+	int threadCount = 7;
+	int difficulty = 1;
 
 
 	std::vector<ThreadParam*> threadList = std::vector<ThreadParam*>(threadCount);
@@ -121,7 +121,7 @@ int main()
 			if (threadList[i]->state > 1)
 			{
 				std::cout << "\33[" << threadList[i]->posY << ";" << threadList[i]->posX << "H";
-				std::cout << "THREAD (" << (char)threadList[i]->state << ")";
+				std::cout << "THREAD (" << "\33[1m" << (char)threadList[i]->state << "\33[m)";
 			}
 			else if (threadList[i]->state == 1)
 			{
@@ -132,9 +132,6 @@ int main()
 		}
 
 		// Draw Points 
-
-		//std::cout << "\33[3;70H";
-		//std::cout << "\33[0K";
 
 		std::cout << "\33[3;100H";
 		std::cout << points;
@@ -150,7 +147,7 @@ int main()
 	std::cout << "\33[10;35H";
 	std::cout << "GAME OVER";
 	std::cout << "\33[11;35H";
-	std::cout << "SCORE : " << points;
+	std::cout << "FINAL SCORE : " << points;
 
 	for (int i = 0; i < 10; i++)
 		std::cout << "\n";
