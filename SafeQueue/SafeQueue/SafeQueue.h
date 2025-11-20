@@ -9,13 +9,23 @@ class SafeQueue
 	int size;
 	int capacity;
 
+	bool isDestroyed = false;
+
+	CRITICAL_SECTION   QueueLocked;
+
 public:
 	SafeQueue(int size = 10);
+	~SafeQueue();
 
-	void PushElement(T element);
-	T PopElement();
+	void Delete();
+
+	bool PushElement(T element);
+	T* PopElement();
+	T* GetElementList() const;
+
+	CRITICAL_SECTION* GetCriticalSection();
 	
-	void Display();
+	int GetSize();
 };
 
 template<typename T>
@@ -24,53 +34,110 @@ inline SafeQueue<T>::SafeQueue(int _maxsize)
 	size = 0;
 	capacity = _maxsize;
 	pElements = new T[capacity];
+
+	InitializeCriticalSection(&QueueLocked);
 }
 
 template<typename T>
-inline void SafeQueue<T>::PushElement(T element)
+inline SafeQueue<T>::~SafeQueue()
 {
-	//InitializeCriticalSection(&element);
-	if (size == capacity)
+	DeleteCriticalSection(&QueueLocked);
+}
+
+template<typename T>
+inline void SafeQueue<T>::Delete()
+{
+	while(true)
 	{
-		capacity += 10;
-		T* tempPtr = new T[size];
-		for (int i = 0; i < size; i++)
+		if(TryEnterCriticalSection(&QueueLocked) != 0)
 		{
-			tempPtr[i] = pElements[i];
+			isDestroyed = true;
+			LeaveCriticalSection(&QueueLocked);
+			return;
+		}
+	}
+}
+
+template<typename T>
+inline bool SafeQueue<T>::PushElement(T element)
+{
+	if (isDestroyed)
+		return false;
+	
+	if(TryEnterCriticalSection(&QueueLocked) != 0)
+	{
+		if (size == capacity)
+		{
+			capacity += 10;
+			T* tempPtr = new T[size];
+			for (int i = 0; i < size; i++)
+			{
+				tempPtr[i] = pElements[i];
+			}
+
+			delete[]pElements;
+
+			pElements = new T[capacity];
+			for (int i = 0; i < size; i++)
+			{
+				pElements[i] = tempPtr[i];
+			}
+			delete[]tempPtr;
 		}
 
-		delete[]pElements;
+		pElements[size++] = element;
 
-		pElements = new T[capacity];
-		for (int i = 0; i < size; i++)
+
+		LeaveCriticalSection(&QueueLocked);
+		return true;
+	}
+	return false;
+}
+
+template<typename T>
+inline T* SafeQueue<T>::PopElement()
+{
+	if (isDestroyed)
+		return nullptr;
+
+	if (size > 0)
+	{
+		if (TryEnterCriticalSection(&QueueLocked) !=0)
 		{
-			pElements[i] = tempPtr[i];
+			T returnElement = pElements[0];
+
+			for (int i = 0; i + 1 < size; i++)
+			{
+				pElements[i] = pElements[i + 1];
+			}
+			size -= 1;
+
+			LeaveCriticalSection(&QueueLocked);
+			return &returnElement;
 		}
-		delete[]tempPtr;
 	}
-	pElements[size++] = element;
+	return nullptr;
+	
 }
 
 template<typename T>
-inline T SafeQueue<T>::PopElement()
+inline T* SafeQueue<T>::GetElementList() const
 {
-	T returnElement = pElements[0];
+	if (isDestroyed)
+		return nullptr;
 
-	for (int i = 0; i + 1 < size; i++)
-	{
-		pElements[i] = pElements[i + 1];
-	}
-	size -= 1;
-
-	return returnElement;
+	return pElements;
 }
 
 template<typename T>
-inline void SafeQueue<T>::Display()
+inline CRITICAL_SECTION* SafeQueue<T>::GetCriticalSection()
 {
-	for (int i = 0; i < size; i++)
-	{
-		std::cout << pElements[i] << ",";
-	}
+	return &QueueLocked;
+}
+
+template<typename T>
+inline int SafeQueue<T>::GetSize()
+{
+	return size;
 }
 
